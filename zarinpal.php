@@ -49,7 +49,6 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 			'amount'                      => 'decimal(15,5) NOT NULL DEFAULT \'0.00000\'',
 			'payment_currency'            => 'char(3)',
 			'email_currency'              => 'char(3)',
-			'tax_id'                      => 'smallint(1)',
 			'mobile'                      => 'varchar(12)',
 			'tracking_code'               => 'varchar(50)'
 		);
@@ -71,10 +70,11 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 		}
 		$session->set('uniq', $crypt_virtuemartPID);
 
-		$totalInPaymentCurrency = vmPSPlugin::getAmountInCurrency($order['details']['BT']->order_total,$method->payment_currency);
-		$currency_code_3 = shopFunctions::getCurrencyByID($method->payment_currency, 'currency_code_3');
+		$payment_currency = $this->getPaymentCurrency($method,$order['details']['BT']->payment_currency_id);
+		$totalInPaymentCurrency = vmPSPlugin::getAmountInCurrency($order['details']['BT']->order_total,$payment_currency);
+		$currency_code_3 = shopFunctions::getCurrencyByID($payment_currency, 'currency_code_3');
 		$email_currency = $this->getEmailCurrency($method);
-		$dbValues['payment_name'] = $this->renderPluginName ($method) . '<br />' . $method->payment_info;
+		$dbValues['payment_name'] = $this->renderPluginName ($method) . '<br />';
 		$dbValues['order_number'] = $order['details']['BT']->order_number;
 		$dbValues['order_pass'] = $order['details']['BT']->order_pass;
 		$dbValues['virtuemart_paymentmethod_id'] = $order['details']['BT']->virtuemart_paymentmethod_id;
@@ -84,7 +84,6 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 		$dbValues['email_currency'] = $email_currency;
 		$dbValues['amount'] = $totalInPaymentCurrency['value'];
 		$dbValues['mobile'] = $order['details']['BT']->phone_2;
-		$dbValues['tax_id'] = $method->tax_id;
 		$this->storePSPluginInternalData ($dbValues);
 		$id = JUserHelper::getCryptedPassword($order['details']['BT']->virtuemart_order_id);
 		$app	= JFactory::getApplication();
@@ -285,6 +284,10 @@ public function plgVmOnPaymentResponseReceived(&$html) {
 		}
 
 		return FALSE;
+	}
+	
+	public function plgVmOnSelectCheckPayment (VirtueMartCart $cart, &$msg) {
+		return $this->OnSelectCheck ($cart);
 	}
  
 	function plgVmOnCheckAutomaticSelectedPayment (VirtueMartCart $cart, array $cart_prices = array(), &$paymentCounter) { 
