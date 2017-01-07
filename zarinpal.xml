@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<extension version="3.6" type="plugin" group="vmpayment" method="upgrade">
+    <name>Zarinpal</name>
+    <author>Trangell</author>
+	<creationDate>Jan 2016</creationDate>
+	<copyright>Copyright 2016 Trangell Team</copyright>
+	<license>http://www.gnu.org/licenses/old-licenses/gpl-2.0.html GNU/GPL version 2</license>
+	<authorEmail>info@trangell.com</authorEmail>
+	<authorUrl>http://trangell.com</authorUrl>
+	<version>0.0.1</version>
+    <description>پلاگین پرداخت برای ویرچومارت</description>
+
+    <files>
+        <filename plugin="zarinpal">zarinpal.php</filename>
+        <folder>helper</folder>
+        <folder>zarinpal</folder>
+    </files>
+
+    <vmconfig>
+        <fields name="params">
+            <fieldset name="payment"  addfieldpath="/administrator/components/com_virtuemart/fields">
+				<field name="merchant_id" type="text" size="40" label="شناسه مرچند" description="شانسه مرچند خود را وارد کنید" default=""></field>
+            </fieldset>
+        </fields>
+    </vmconfig>
+</extension>
