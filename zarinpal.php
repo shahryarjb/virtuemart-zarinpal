@@ -86,7 +86,7 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 		$dbValues['mobile'] = $order['details']['BT']->phone_2;
 		$dbValues['tax_id'] = $method->tax_id;
 		$this->storePSPluginInternalData ($dbValues);
-
+		$id = JUserHelper::getCryptedPassword($order['details']['BT']->virtuemart_order_id);
 		$app	= JFactory::getApplication();
 		$Amount = $totalInPaymentCurrency['value']/10; // Toman 
 		$Description = 'خرید محصول از فروشگاه   '. $cart->vendor->vendor_store_name; 
@@ -136,14 +136,7 @@ public function plgVmOnPaymentResponseReceived(&$html) {
 		$jinput = $app->input;
 		$Authority = $jinput->get->get('Authority', '0', 'INT');
 		$status = $jinput->get->get('Status', '', 'STRING');
-		if (checkHack::checkString($status) != true){
-			$app	= JFactory::getApplication();
-			$msg= $this->getGateMsg('hck2'); 
-			$this->updateStatus ('U',0,$msg,$id); 
-			$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
-			$app->redirect($link, '<h2>'.$msg.'</h2>'.$virtuemart_order_id, $msgType='Error'); 
-		}
-	
+		
 		$session = JFactory::getSession();
 		if ($session->isActive('uniq')) {
 			$cryptID = $session->get('uniq'); 
@@ -152,7 +145,6 @@ public function plgVmOnPaymentResponseReceived(&$html) {
 		else {
 			$app	= JFactory::getApplication();
 			$msg= $this->getGateMsg('notff'); 
-			$this->updateStatus ('U',0,$msg,$id); 
 			$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
 			$app->redirect($link, '<h2>'.$msg.'</h2>'.$virtuemart_order_id, $msgType='Error'); 
 		}
@@ -168,6 +160,14 @@ public function plgVmOnPaymentResponseReceived(&$html) {
 		$pass_id = $orderInfo->order_pass;
 		$price = round($orderInfo->amount,5);
 		$method = $this->getVmPluginMethod ($payment_id);
+		
+		if (checkHack::checkString($status) != true){
+			$app	= JFactory::getApplication();
+			$msg= $this->getGateMsg('hck2'); 
+			$this->updateStatus ('U',0,$msg,$id); 
+			$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
+			$app->redirect($link, '<h2>'.$msg.'</h2>'.$virtuemart_order_id, $msgType='Error'); 
+		}
 		
 		if (JUserHelper::verifyPassword($id , $uId)) {
 			if ($status == 'OK') {
