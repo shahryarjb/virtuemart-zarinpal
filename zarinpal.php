@@ -213,14 +213,14 @@ public function plgVmOnPaymentResponseReceived(&$html) {
 				$this->updateStatus ('X',0,$msg,$id);
 				$app	= JFactory::getApplication();
 				$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
-				$app->redirect($link, '<h2>'.$msg.'</h2>'.$virtuemart_order_id, $msgType='Error'); 
+				$app->redirect($link, '<h2>'.$msg.'</h2>', $msgType='Error'); 
 			}
 		}
 		else {	
 			$msg= $this->getGateMsg('notff');
 			$app	= JFactory::getApplication();
 			$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
-			$app->redirect($link, '<h2>'.$msg.'</h2>'.$virtuemart_order_id, $msgType='Error'); 
+			$app->redirect($link, '<h2>'.$msg.'</h2>', $msgType='Error'); 
 		}
 	}
 
