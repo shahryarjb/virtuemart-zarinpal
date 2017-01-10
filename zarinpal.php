@@ -97,8 +97,8 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 		$CallbackURL = JURI::root().'index.php?option=com_virtuemart&view=pluginresponse&task=pluginresponsereceived'; 
 		
 		try {
-			// $client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); 	
-			 $client = new SoapClient('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); // for local
+			 $client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); 	
+			// $client = new SoapClient('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); // for local
 
 			$result = $client->PaymentRequest(
 				[
@@ -114,8 +114,8 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 			$resultStatus = abs($result->Status); 
 			if ($resultStatus == 100) {
 			
-			//Header('Location: https://www.zarinpal.com/pg/StartPay/'.$result->Authority); 
-			 Header('Location: https://sandbox.zarinpal.com/pg/StartPay/'.$result->Authority); // for local/
+			Header('Location: https://www.zarinpal.com/pg/StartPay/'.$result->Authority); 
+			 //Header('Location: https://sandbox.zarinpal.com/pg/StartPay/'.$result->Authority); // for local/
 			} else {
 				$msg= $this->getGateMsg('error'); 
 				$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
@@ -179,8 +179,8 @@ public function plgVmOnPaymentResponseReceived(&$html) {
 		if (JUserHelper::verifyPassword($id , $uId)) {
 			if ($status == 'OK') {
 				try {
-				   // $client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); 
-					 $client = new SoapClient('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); // for local
+				    $client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); 
+					 //$client = new SoapClient('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); // for local
 					$result = $client->PaymentVerification(
 						[
 							'MerchantID' => $method->merchant_id,
