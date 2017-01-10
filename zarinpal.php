@@ -2,7 +2,7 @@
 /**
  * @package     Joomla - > Site and Administrator payment info
  * @subpackage  com_virtuemart
- * @subpackage 		zarinpal
+ * @subpackage 	Trangell_Zarinpal
  * @copyright   trangell team => https://trangell.com
  * @copyright   Copyright (C) 20016 Open Source Matters, Inc. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
@@ -58,6 +58,10 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 
 
 	function plgVmConfirmedOrder ($cart, $order) {
+		if (!$this->selectedThisByMethodId($cart->virtuemart_paymentmethod_id)) {
+			return null; 
+		}
+		
 		if (!($method = $this->getVmPluginMethod ($order['details']['BT']->virtuemart_paymentmethod_id))) {
 			return NULL; 
 		}
@@ -94,7 +98,7 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 		
 		try {
 			 $client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); 	
-			// $client = new SoapClient('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); // for local
+			 //$client = new SoapClient('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); // for local
 
 			$result = $client->PaymentRequest(
 				[
@@ -111,7 +115,7 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 			if ($resultStatus == 100) {
 			
 			Header('Location: https://www.zarinpal.com/pg/StartPay/'.$result->Authority); 
-			// Header('Location: https://sandbox.zarinpal.com/pg/StartPay/'.$result->Authority); // for local/
+			 //Header('Location: https://sandbox.zarinpal.com/pg/StartPay/'.$result->Authority); // for local/
 			} else {
 				$msg= $this->getGateMsg('error'); 
 				$this->updateStatus ('P',0,$msg,$id); 
@@ -130,7 +134,11 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 		
 	}
 
-public function plgVmOnPaymentResponseReceived(&$html) {
+public function plgVmOnPaymentResponseReceived(&$html) {	
+		if (!class_exists('VirtueMartModelOrders')) {
+			require(VMPATH_ADMIN . DS . 'models' . DS . 'orders.php');
+		}
+		
 		$app = JFactory::getApplication();
 		$jinput = $app->input;
 		$Authority = $jinput->get->get('Authority', '0', 'INT');
@@ -139,7 +147,7 @@ public function plgVmOnPaymentResponseReceived(&$html) {
 		$session = JFactory::getSession();
 		if ($session->isActive('uniq')) {
 			$cryptID = $session->get('uniq'); 
-			$session->clear('uniq'); 
+			
 		}
 		else {
 			$app	= JFactory::getApplication();
@@ -147,8 +155,16 @@ public function plgVmOnPaymentResponseReceived(&$html) {
 			$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
 			$app->redirect($link, '<h2>'.$msg.'</h2>', $msgType='Error'); 
 		}
-		
 		$orderInfo = $this->getOrderInfo ($cryptID);
+		if ($orderInfo != null){
+			if (!($currentMethod = $this->getVmPluginMethod($orderInfo->virtuemart_paymentmethod_id))) {
+				return NULL; 
+			}			
+		}
+		else {
+			return NULL;  
+		}
+		
 		$salt = $orderInfo->salt;
 		$id = $orderInfo->virtuemart_order_id;
 		$uId = $cryptID.':'.$salt;
@@ -194,17 +210,16 @@ public function plgVmOnPaymentResponseReceived(&$html) {
 						vRequest::setVar ('html', $html);
 						$cart = VirtueMartCart::getCart();
 						$cart->emptyCart();
+						$session->clear('uniq'); 
 					} 
 					else {
 						$msg= $this->getGateMsg($resultStatus);
-						$this->updateStatus ('P',0,$msg,$id); 
 						$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
 						$app->redirect($link, '<h2>'.$msg.'</h2>', $msgType='Error'); 
 					}
 				}
 				catch(\SoapFault $e) {
 					$msg= $this->getGateMsg('error'); 
-					$this->updateStatus ('P',0,$msg,$id); 
 					$app	= JFactory::getApplication();
 					$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
 					$app->redirect($link, '<h2>'.$msg.'</h2>', $msgType='Error'); 
@@ -227,6 +242,18 @@ public function plgVmOnPaymentResponseReceived(&$html) {
 		}
 	}
 
+	function plgVmOnUserPaymentCancel() {
+
+		if (!class_exists('VirtueMartModelOrders')) {
+			require(VMPATH_ADMIN . DS . 'models' . DS . 'orders.php');
+		}
+
+		$order_number = vRequest::getString('on', '');
+		$virtuemart_paymentmethod_id = vRequest::getInt('pm', '');
+		if (!$this->selectedThisByMethodId($virtuemart_paymentmethod_id)) {
+			return NULL;
+		}
+	}
 
 	protected function getOrderInfo ($id){
 		$db = JFactory::getDbo();
@@ -285,7 +312,48 @@ public function plgVmOnPaymentResponseReceived(&$html) {
 		return FALSE;
 	}
 	
+	public function plgVmDisplayListFEPayment(VirtueMartCart $cart, $selected = 0, &$htmlIn) {
+
+		if ($this->getPluginMethods($cart->vendorId) === 0) {
+			if (empty($this->_name)) {
+				$app = JFactory::getApplication();
+				$app->enqueueMessage(vmText::_('COM_VIRTUEMART_CART_NO_' . strtoupper($this->_psType)));
+				return false;
+			} else {
+				return false;
+			}
+		}
+		$method_name = $this->_psType . '_name';
+
+		$htmla = array();
+		foreach ($this->methods as $this->_currentMethod) {
+			if ($this->checkConditions($cart, $this->_currentMethod, $cart->cartPrices)) {
+
+				$html = '';
+				$cartPrices=$cart->cartPrices;
+				if (isset($this->_currentMethod->cost_method)) {
+					$cost_method=$this->_currentMethod->cost_method;
+				} else {
+					$cost_method=true;
+				}
+				$methodSalesPrice = $this->setCartPrices($cart, $cartPrices, $this->_currentMethod, $cost_method);
+
+				$this->_currentMethod->payment_currency = $this->getPaymentCurrency($this->_currentMethod);
+				$this->_currentMethod->$method_name = $this->renderPluginName($this->_currentMethod);
+				$html .= $this->getPluginHtml($this->_currentMethod, $selected, $methodSalesPrice);
+				$htmla[] = $html;
+			}
+		}
+		$htmlIn[] = $htmla;
+		return true;
+
+	}
+	
 	public function plgVmOnSelectCheckPayment (VirtueMartCart $cart, &$msg) {
+		if (!$this->selectedThisByMethodId($cart->virtuemart_paymentmethod_id)) {
+			return null; 
+		}
+		
 		return $this->OnSelectCheck ($cart);
 	}
  
@@ -298,6 +366,9 @@ public function plgVmOnPaymentResponseReceived(&$html) {
 	}
 
 	public function plgVmOnCheckoutCheckDataPayment(  VirtueMartCart $cart) { 
+		if (!$this->selectedThisByMethodId($cart->virtuemart_paymentmethod_id)) {
+			return NULL; 
+		}
 			return true;
 	}
 
