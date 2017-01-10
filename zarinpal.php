@@ -94,11 +94,11 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 		$Amount = $totalInPaymentCurrency['value']/10; // Toman 
 		$Description = 'خرید محصول از فروشگاه   '. $cart->vendor->vendor_store_name; 
 		$MerchantID = $method->merchant_id;
-		$CallbackURL = JURI::root().'index.php?option=com_virtuemart&view=pluginresponse&task=pluginresponsereceived'; 
+		$CallbackURL = JURI::root().'index.php?option=com_virtuemart&view=pluginresponse&task=pluginresponsereceived&gid=3'; 
 		
 		try {
-			 $client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); 	
-			// $client = new SoapClient('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); // for local
+			// $client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); 	
+			 $client = new SoapClient('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); // for local
 
 			$result = $client->PaymentRequest(
 				[
@@ -114,8 +114,8 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 			$resultStatus = abs($result->Status); 
 			if ($resultStatus == 100) {
 			
-			Header('Location: https://www.zarinpal.com/pg/StartPay/'.$result->Authority); 
-			 //Header('Location: https://sandbox.zarinpal.com/pg/StartPay/'.$result->Authority); // for local/
+			//Header('Location: https://www.zarinpal.com/pg/StartPay/'.$result->Authority); 
+			 Header('Location: https://sandbox.zarinpal.com/pg/StartPay/'.$result->Authority); // for local/
 			} else {
 				$msg= $this->getGateMsg('error'); 
 				$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
@@ -130,104 +130,111 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 		
 	}
 
-public function plgVmOnPaymentResponseReceived(&$html) {	
+	public function plgVmOnPaymentResponseReceived(&$html) {	
 		if (!class_exists('VirtueMartModelOrders')) {
 			require(VMPATH_ADMIN . DS . 'models' . DS . 'orders.php');
 		}
 		
-		$app = JFactory::getApplication();
+		$app	= JFactory::getApplication();		
 		$jinput = $app->input;
-		$Authority = $jinput->get->get('Authority', '0', 'INT');
-		$status = $jinput->get->get('Status', '', 'STRING');
+		$gateway = $jinput->get->get('gid', '0', 'INT');
 		
-		$session = JFactory::getSession();
-		if ($session->isActive('uniq') && $session->get('uniq') != null) {
-			$cryptID = $session->get('uniq'); 
-		}
-		else {
-			$msg = $this->getGateMsg('notff'); 
-			$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
-			$app->redirect($link, '<h2>'.$msg.'</h2>', $msgType='Error'); 
-		}
-		$orderInfo = $this->getOrderInfo ($cryptID);
-		if ($orderInfo != null){
-			if (!($currentMethod = $this->getVmPluginMethod($orderInfo->virtuemart_paymentmethod_id))) {
-				return NULL; 
-			}			
-		}
-		else {
-			return NULL;  
-		}
-		
-		$salt = $orderInfo->salt;
-		$id = $orderInfo->virtuemart_order_id;
-		$uId = $cryptID.':'.$salt;
-		
-		$order_id = $orderInfo->order_number; 
-		//$mobile = $orderInfo->mobile; 
-		$payment_id = $orderInfo->virtuemart_paymentmethod_id; 
-		$pass_id = $orderInfo->order_pass;
-		$price = round($orderInfo->amount,5);
-		$method = $this->getVmPluginMethod ($payment_id);
-		
-		if (checkHack::checkString($status) != true){
-			$msg= $this->getGateMsg('hck2'); 
-			$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
-			$app->redirect($link, '<h2>'.$msg.'</h2>'.$virtuemart_order_id, $msgType='Error'); 
-		}
-		
-		if (JUserHelper::verifyPassword($id , $uId)) {
-			if ($status == 'OK') {
-				try {
-				    $client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); 
-					 //$client = new SoapClient('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); // for local
-					$result = $client->PaymentVerification(
-						[
-							'MerchantID' => $method->merchant_id,
-							'Authority' => $Authority,
-							'Amount' => $price/10,
-						]
-					);
-					$resultStatus = abs($result->Status); 
-					if ($resultStatus == 100) {
-						$msg= $this->getGateMsg($resultStatus);
-						$html = $this->renderByLayout('zarinpal_payment', array(
-							'order_number' =>$order_id,
-							'order_pass' =>$pass_id,
-							'tracking_code' => $result->RefID,
-							'status' => $msg
-						));
-						$this->updateStatus ('C',1,$msg,$id);
-						$this->updateOrderInfo ($id,$result->RefID);
-						vRequest::setVar ('html', $html);
-						$cart = VirtueMartCart::getCart();
-						$cart->emptyCart();
-						$session->clear('uniq'); 
-					} 
-					else {
-						$msg= $this->getGateMsg($resultStatus);
+		if ($gateway == '3'){
+			$Authority = $jinput->get->get('Authority', '0', 'INT');
+			$status = $jinput->get->get('Status', '', 'STRING');
+			
+			$session = JFactory::getSession();
+			if ($session->isActive('uniq') && $session->get('uniq') != null) {
+				$cryptID = $session->get('uniq'); 
+			}
+			else {
+				$msg = $this->getGateMsg('notff'); 
+				$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
+				$app->redirect($link, '<h2>'.$msg.'</h2>', $msgType='Error'); 
+			}
+			$orderInfo = $this->getOrderInfo ($cryptID);
+			if ($orderInfo != null){
+				if (!($currentMethod = $this->getVmPluginMethod($orderInfo->virtuemart_paymentmethod_id))) {
+					return NULL; 
+				}			
+			}
+			else {
+				return NULL;  
+			}
+			
+			$salt = $orderInfo->salt;
+			$id = $orderInfo->virtuemart_order_id;
+			$uId = $cryptID.':'.$salt;
+			
+			$order_id = $orderInfo->order_number; 
+			//$mobile = $orderInfo->mobile; 
+			$payment_id = $orderInfo->virtuemart_paymentmethod_id; 
+			$pass_id = $orderInfo->order_pass;
+			$price = round($orderInfo->amount,5);
+			$method = $this->getVmPluginMethod ($payment_id);
+			
+			if (checkHack::checkString($status) != true){
+				$msg= $this->getGateMsg('hck2'); 
+				$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
+				$app->redirect($link, '<h2>'.$msg.'</h2>'.$virtuemart_order_id, $msgType='Error'); 
+			}
+			
+			if (JUserHelper::verifyPassword($id , $uId)) {
+				if ($status == 'OK') {
+					try {
+						//$client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); 
+						 $client = new SoapClient('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); // for local
+						$result = $client->PaymentVerification(
+							[
+								'MerchantID' => $method->merchant_id,
+								'Authority' => $Authority,
+								'Amount' => $price/10,
+							]
+						);
+						$resultStatus = abs($result->Status); 
+						if ($resultStatus == 100) {
+							$msg= $this->getGateMsg($resultStatus);
+							$html = $this->renderByLayout('zarinpal_payment', array(
+								'order_number' =>$order_id,
+								'order_pass' =>$pass_id,
+								'tracking_code' => $result->RefID,
+								'status' => $msg
+							));
+							$this->updateStatus ('C',1,$msg,$id);
+							$this->updateOrderInfo ($id,$result->RefID);
+							vRequest::setVar ('html', $html);
+							$cart = VirtueMartCart::getCart();
+							$cart->emptyCart();
+							$session->clear('uniq'); 
+						} 
+						else {
+							$msg= $this->getGateMsg($resultStatus);
+							$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
+							$app->redirect($link, '<h2>'.$msg.'</h2>', $msgType='Error'); 
+						}
+					}
+					catch(\SoapFault $e) {
+						$msg= $this->getGateMsg('error'); 
 						$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
 						$app->redirect($link, '<h2>'.$msg.'</h2>', $msgType='Error'); 
 					}
+				
 				}
-				catch(\SoapFault $e) {
-					$msg= $this->getGateMsg('error'); 
+				else {
+					$msg= $this->getGateMsg(intval(17)); 
+					$this->updateStatus ('X',0,$msg,$id); 
 					$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
 					$app->redirect($link, '<h2>'.$msg.'</h2>', $msgType='Error'); 
 				}
-			
 			}
-			else {
-				$msg= $this->getGateMsg(intval(17)); 
-				$this->updateStatus ('X',0,$msg,$id); 
+			else {	
+				$msg= $this->getGateMsg('notff');
 				$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
 				$app->redirect($link, '<h2>'.$msg.'</h2>', $msgType='Error'); 
 			}
 		}
-		else {	
-			$msg= $this->getGateMsg('notff');
-			$link = JRoute::_(JUri::root().'index.php/component/virtuemart/cart',false);
-			$app->redirect($link, '<h2>'.$msg.'</h2>', $msgType='Error'); 
+		else {
+			return NULL;
 		}
 	}
 
