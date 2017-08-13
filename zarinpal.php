@@ -4,7 +4,7 @@
  * @subpackage  com_virtuemart
  * @subpackage 	Trangell_Zarinpal
  * @copyright   trangell team => https://trangell.com
- * @copyright   Copyright (C) 20016 Open Source Matters, Inc. All rights reserved.
+ * @copyright   Copyright (C) 2017 Open Source Matters, Inc. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  */
 defined ('_JEXEC') or die('Restricted access');
@@ -113,8 +113,12 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 			
 			$resultStatus = abs($result->Status); 
 			if ($resultStatus == 100) {
-			
-			Header('Location: https://www.zarinpal.com/pg/StartPay/'.$result->Authority); 
+				if (intval($method->zaringate) == 0){
+					Header('Location: https://www.zarinpal.com/pg/StartPay/'.$result->Authority); 
+				}
+				else {
+					Header('Location: https://www.zarinpal.com/pg/StartPay/'.$result->Authority.'‪/ZarinGate‬‬'); 
+				}
 			 //Header('Location: https://sandbox.zarinpal.com/pg/StartPay/'.$result->Authority); // for local/
 			} else {
 				$msg= $this->getGateMsg('error'); 
@@ -182,7 +186,12 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 			if (JUserHelper::verifyPassword($id , $uId)) {
 				if ($status == 'OK') {
 					try {
-						$client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); 
+						if (intval($method->zaringate) == 0){
+							$client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); 
+						}
+						else {
+							$client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl/ZarinGate‬‬', ['encoding' => 'UTF-8']); 
+						}
 						 //$client = new SoapClient('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); // for local
 						$result = $client->PaymentVerification(
 							[
