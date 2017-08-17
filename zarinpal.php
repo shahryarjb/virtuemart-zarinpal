@@ -27,7 +27,7 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 		$this->tableFields = array_keys ($this->getTableSQLFields ());
 		$this->_tablepkey = 'id';
 		$this->_tableId = 'id';
-		$varsToPush = array('merchant_id' => array('', 'varchar'));
+		$varsToPush = array('merchant_id' => array('', 'varchar'),'zaringate' => array(0, 'int'));
 		$this->setConfigParameterable($this->_configTableFieldName, $varsToPush);
 	}
 
@@ -113,7 +113,7 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 			
 			$resultStatus = abs($result->Status); 
 			if ($resultStatus == 100) {
-				if (intval($method->zaringate) == 0){
+				if ($method->zaringate == 0){
 					Header('Location: https://www.zarinpal.com/pg/StartPay/'.$result->Authority); 
 				}
 				else {
@@ -186,12 +186,7 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 			if (JUserHelper::verifyPassword($id , $uId)) {
 				if ($status == 'OK') {
 					try {
-						if (intval($method->zaringate) == 0){
-							$client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); 
-						}
-						else {
-							$client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl/ZarinGate‬‬', ['encoding' => 'UTF-8']); 
-						}
+						$client = new SoapClient('https://www.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); 
 						 //$client = new SoapClient('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl', ['encoding' => 'UTF-8']); // for local
 						$result = $client->PaymentVerification(
 							[
