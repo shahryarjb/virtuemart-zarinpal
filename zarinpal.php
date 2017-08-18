@@ -4,7 +4,7 @@
  * @subpackage  com_virtuemart
  * @subpackage 	Trangell_Zarinpal
  * @copyright   trangell team => https://trangell.com
- * @copyright   Copyright (C) 20016 Open Source Matters, Inc. All rights reserved.
+ * @copyright   Copyright (C) 2017 Open Source Matters, Inc. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  */
 defined ('_JEXEC') or die('Restricted access');
@@ -27,7 +27,7 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 		$this->tableFields = array_keys ($this->getTableSQLFields ());
 		$this->_tablepkey = 'id';
 		$this->_tableId = 'id';
-		$varsToPush = array('merchant_id' => array('', 'varchar'));
+		$varsToPush = array('merchant_id' => array('', 'varchar'),'zaringate' => array(0, 'int'));
 		$this->setConfigParameterable($this->_configTableFieldName, $varsToPush);
 	}
 
@@ -113,8 +113,12 @@ class plgVmPaymentZarinpal extends vmPSPlugin {
 			
 			$resultStatus = abs($result->Status); 
 			if ($resultStatus == 100) {
-			
-			Header('Location: https://www.zarinpal.com/pg/StartPay/'.$result->Authority); 
+				if ($method->zaringate == 0){
+					Header('Location: https://www.zarinpal.com/pg/StartPay/'.$result->Authority); 
+				}
+				else {
+					Header('Location: https://www.zarinpal.com/pg/StartPay/'.$result->Authority.'‪/ZarinGate‬‬'); 
+				}
 			 //Header('Location: https://sandbox.zarinpal.com/pg/StartPay/'.$result->Authority); // for local/
 			} else {
 				$msg= $this->getGateMsg('error'); 
